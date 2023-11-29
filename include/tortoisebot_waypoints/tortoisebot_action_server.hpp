@@ -69,8 +69,8 @@ private:
   Point _des_pos;
 
   // parameters
-  const double _yaw_precision = M_PI / 90;
-  const double _dist_preciion = 0.05;
+  const double _yaw_precision = 2*M_PI / 90;
+  const double _dist_precision = 0.05;
 };
 
 #endif

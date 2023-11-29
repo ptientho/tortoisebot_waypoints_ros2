@@ -1,6 +1,23 @@
 cmake_minimum_required(VERSION 3.8)
 project(tortoisebot_waypoints)
 
+# Default to C99
+if(NOT CMAKE_C_STANDARD)
+  set(CMAKE_C_STANDARD 99)
+endif()
+
+# Default to C++14
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 14)
+  set(CMAKE_CXX_STANDARD_REQUIRED ON)
+endif()
+
+include(FetchContent)
+FetchContent_Declare(
+  googletest
+  URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip
+)
+
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
@@ -57,7 +74,22 @@ if(BUILD_TESTING)
   # the following line skips cpplint (only works in a git repo)
   # uncomment the line when this package is not in a git repo
   #set(ament_cmake_cpplint_FOUND TRUE)
-  ament_lint_auto_find_test_dependencies()
+
+  find_package(ament_cmake_gtest REQUIRED)
+
+  set(TESTFILES test/main.cpp test/tortoisebot_waypoints_test.cpp)
+
+  ament_add_gtest(${PROJECT_NAME}_test ${TESTFILES})
+  target_link_libraries(${PROJECT_NAME}_test tortoisebot_waypoints_lib)
+  set_tests_properties(${PROJECT_NAME}_test PROPERTIES TIMEOUT 300) #timeout 5 mins
+
+  install(TARGETS 
+	${PROJECT_NAME}_test
+	DESTINATION lib/${PROJECT_NAME}
+  )
+
+
+  #ament_lint_auto_find_test_dependencies()
 endif()
 
 ament_package()

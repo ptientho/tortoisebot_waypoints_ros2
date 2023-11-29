@@ -62,7 +62,7 @@ rclcpp_action::GoalResponse WaypointActionClass::handle_goal(
     std::shared_ptr<const WaypointAction::Goal> goal) {
 
   ///////////////////////////////
-  RCLCPP_INFO(this->get_logger(), "Received goal request", goal->position);
+  RCLCPP_INFO(this->get_logger(), "Received goal request: [x: %f, y: %f]", goal->position.x, goal->position.y);
   (void)uuid;
   return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
 }
@@ -93,7 +93,7 @@ void WaypointActionClass::execute(
   ///////////////////////////////
   RCLCPP_INFO(this->get_logger(), "Executing goal");
 
-  rclcpp::Rate _rate(1);
+  rclcpp::Rate _rate(25);
   const auto goal = goal_handle->get_goal();
   auto feedback = std::make_shared<WaypointAction::Feedback>();
   auto result = std::make_shared<WaypointAction::Result>();
@@ -106,13 +106,19 @@ void WaypointActionClass::execute(
                         pow(this->_des_pos.x - this->_position.x, 2));
   double err_yaw = desired_yaw - this->_yaw;
 
-  RCLCPP_INFO(this->get_logger(), "Current Yaw: %f", this->_yaw);
-  RCLCPP_INFO(this->get_logger(), "Desired Yaw: %f", desired_yaw);
-  RCLCPP_INFO(this->get_logger(), "Error Yaw: %f", err_yaw);
-
   // loop for execution
-  while (err_pos > this->_dist_preciion && rclcpp::ok()) {
+  while (err_pos > this->_dist_precision && rclcpp::ok()) {
     // update vars
+    desired_yaw = atan2(this->_des_pos.y - this->_position.y,
+                             this->_des_pos.x - this->_position.x);
+    err_pos = sqrt(pow(this->_des_pos.y - this->_position.y, 2) +
+                        pow(this->_des_pos.x - this->_position.x, 2));
+    err_yaw = desired_yaw - this->_yaw;
+    
+    RCLCPP_INFO(this->get_logger(), "Current Yaw: %f", this->_yaw);
+    RCLCPP_INFO(this->get_logger(), "Desired Yaw: %f", desired_yaw);
+    RCLCPP_INFO(this->get_logger(), "Error Yaw: %f", err_yaw);
+    // logic goes here
     if (goal_handle->is_canceling()) {
       RCLCPP_INFO(this->get_logger(), "The goal has been cancelled/preempted");
       result->success = false;
@@ -123,6 +129,7 @@ void WaypointActionClass::execute(
       RCLCPP_INFO(this->get_logger(), "fixed yaw");
       this->_state = "fix yaw";
       geometry_msgs::msg::Twist vel_msg;
+      
       if (err_yaw > 0) {
         vel_msg.angular.z = 0.65;
       } else {
