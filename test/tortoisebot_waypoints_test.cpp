@@ -78,10 +78,10 @@ public:
   }
 
   // cancel goal
-  //void cancel_goal(){
+  void cancel_goal(){
     
-  //  this->client_ptr_->async_cancel_goal(GoalHandleWaypoint::SharedPtr goal);
-  //}
+    this->client_ptr_->async_cancel_all_goals();
+  }
 
 
 private:
@@ -146,8 +146,8 @@ public:
                   std::placeholders::_1));
   }
 
-  void err_pos_test(const Point &des_pos_);
-  void err_yaw_test(const Point &des_pos_);
+  void err_test(const Point &des_pos_);
+  void cancel_goal_test(const Point &des_pos_);
 
 private:
   rclcpp::Subscription<Odometry>::SharedPtr odom_sub_;
@@ -170,7 +170,7 @@ private:
   }
 };
 
-void WaypointActionServerTest::err_pos_test(const Point &des_pos_) {
+void WaypointActionServerTest::err_test(const Point &des_pos_) {
 
   action_client_->send_goal(des_pos_);
 
@@ -180,40 +180,43 @@ void WaypointActionServerTest::err_pos_test(const Point &des_pos_) {
 
   double err_pos = sqrt(pow(des_pos_.y - this->position_.y, 2) +
                         pow(des_pos_.x - this->position_.x, 2));
+  
+  double des_yaw_ =
+      atan2(des_pos_.y - this->position_.y, des_pos_.x - this->position_.x);
+  double err_yaw = des_yaw_ - this->yaw_;
 
   EXPECT_LE(err_pos, 0.1);
+  EXPECT_LE(std::abs(err_yaw), 0.5); // +- 2 degree
 }
 
-void WaypointActionServerTest::err_yaw_test(const Point &des_pos_) {
+void WaypointActionServerTest::cancel_goal_test(const Point &des_pos_) {
 
   action_client_->send_goal(des_pos_);
 
   while (!action_client_->is_goal_done()) {
     rclcpp::spin_some(action_client_);
+    this->action_client_->cancel_goal();
+    break;
   }
+  ASSERT_TRUE(false);
 
-  double des_yaw_ =
-      atan2(des_pos_.y - this->position_.y, des_pos_.x - this->position_.x);
-  double err_yaw = des_yaw_ - this->yaw_;
-
-  EXPECT_LE(std::abs(err_yaw), 0.5); // +- 2 degree
 }
 
-TEST_F(WaypointActionServerTest, ErrorPos) {
+TEST_F(WaypointActionServerTest, ErrorTest) {
 
   // goal position
   Point des_pos_;
   des_pos_.x = 0.5;
   des_pos_.y = -0.5;
-  err_pos_test(des_pos_);
+  err_test(des_pos_);
 }
 
-TEST_F(WaypointActionServerTest, ErrorYaw) {
+TEST_F(WaypointActionServerTest, CancelGoal) {
   // goal position
   Point des_pos_;
-  des_pos_.x = 0.5;
-  des_pos_.y = -0.0;
-  err_yaw_test(des_pos_);
+  des_pos_.x = 0.7;
+  des_pos_.y = -0.7;
+  cancel_goal_test(des_pos_);
 }
 
 
